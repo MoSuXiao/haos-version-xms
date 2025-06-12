@@ -22,106 +22,127 @@ jobs:
           echo "Fetched remote file contents:"
           cat remote-stable.json
 
-      - name: Compare fields and update stable.json
-        id: compare_and_update
+      - name: Get local version info
+        id: local
         run: |
-          # Define file paths
           LOCAL_FILE="stable.json"
-          REMOTE_FILE="remote-stable.json"
-
-          # Ensure local stable.json exists
+          
           if [ ! -f "$LOCAL_FILE" ]; then
             echo "Error: $LOCAL_FILE does not exist!"
             exit 1
           fi
-
-          # Extract homeassistant core versions
+          
           LOCAL_HOME=$(jq '.homeassistant' "$LOCAL_FILE")
-          REMOTE_HOME=$(jq '.homeassistant' "$REMOTE_FILE")
+          LOCAL_SUPERVISOR=$(jq -r '.supervisor' "$LOCAL_FILE")
+          
+          echo "local_home=$LOCAL_HOME" >>  "$GITHUB_OUTPUT"
+          echo "local_supervisor=$LOCAL_SUPERVISOR" >>  "$GITHUB_OUTPUT"
+          
+          echo "local_home：$LOCAL_HOME"
+          echo "local_supervisor：$LOCAL_SUPERVISOR"
 
-          # Determine if homeassistant field has changed
+      - name: Get remote version info
+        id: remote
+        run: |
+          REMOTE_FILE="remote-stable.json"
+          
+          if [ ! -f "$REMOTE_FILE" ]; then
+            echo "Error: $REMOTE_FILE does not exist!"
+            exit 1
+          fi
+          
+          REMOTE_HOME=$(jq '.homeassistant' "$REMOTE_FILE")
+          REMOTE_SUPERVISOR=$(jq -r '.supervisor' "$REMOTE_FILE")
+          
+          echo "remote_home=$REMOTE_HOME" >>  "$GITHUB_OUTPUT"
+          echo "remote_supervisor=$REMOTE_SUPERVISOR" >>  "$GITHUB_OUTPUT"
+          
+          echo "remote_home：$REMOTE_HOME"
+          echo "remote_supervisor：$REMOTE_SUPERVISOR"
+
+      - name: Compare homeassistant core versions & update stable.json
+        id: compare_core
+        run: |
           homeassistant_diff=false
-          if [ "$LOCAL_HOME" != "$REMOTE_HOME" ]; then
+          if [ "${{ steps.local.outputs.local_home  }}" != "${{ steps.remote.outputs.remote_home}}" ]; then
             homeassistant_diff=true
             # Update the local file's homeassistant field
             jq --argjson newHome "$REMOTE_HOME" '.homeassistant = $newHome' "$LOCAL_FILE" > temp.json
             mv temp.json "$LOCAL_FILE"
           fi
+          echo "homeassistant_diff=$homeassistant_diff" >>  "$GITHUB_OUTPUT"
 
-          # Extract supervisor fields from top-level
-          LOCAL_SUPERVISOR=$(jq -r '.supervisor' "$LOCAL_FILE")
-          REMOTE_SUPERVISOR=$(jq -r '.supervisor' "$REMOTE_FILE")
-
-          # Determine if supervisor field has changed
+      - name: Compare supervisor version
+        id: compare_supervisor
+        run: |
           supervisor_diff=false
-          if [ "$LOCAL_SUPERVISOR" != "$REMOTE_SUPERVISOR" ]; then
+          if [ "${{ steps.local.outputs.local_supervisor  }}" != "${{ steps.remote.outputs.remote_supervisor }}" ]; then
             supervisor_diff=true
           fi
+          echo "supervisor_diff=$supervisor_diff" >>  "$GITHUB_OUTPUT"
+          
+      - name: Generate dingTalk message
+        id: message
+        if: steps.compare_and_update.outputs.homeassistant_diff == 'true' || steps.compare_and_update.outputs.supervisor_diff == 'true'
+        run: |
+          message_title="新版本Release检测通知"
+          message_body+="---------------------------------------\n\n"
+          
+          if [ "${{ steps.compare_and_update.outputs.supervisor_diff }}" == 'true' ]; then
+              message_body+="**Supervisor版本需要更新: [${{steps.local.outputs.local_supervisor}}] ➡️ [${{steps.remote.outputs.remote_supervisor }}]**\n\n"
+              message_body+="---------------------------------------\n\n"
+          fi
+          
+          if [ "${{ steps.compare_and_update.outputs.homeassistant_diff }}" == 'true' ]; then
+              message_bode+="**Homeassistant Core版本号已同步更新: [${{steps.local.outputs.local_home}}] ➡️ [${{steps.remote.outputs.remote_home}}]**\n\n"
+          fi
+          
+          echo "message_title=$message_title" >> $GITHUB_OUTPUT
+          echo "message_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$message_body" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "Found new releases to notify"
 
-          # Build DingTalk message
-          MESSAGE_TEXT=""
-          if [ "$homeassistant_diff" = "true" ]; then
-            MESSAGE_TEXT="stable.json: homeassistant field has been updated"
-          fi
-          if [ "$supervisor_diff" = "true" ]; then
-            if [ -n "$MESSAGE_TEXT" ]; then
-              MESSAGE_TEXT="${MESSAGE_TEXT}"$'\n'"Supervisor field is different from the remote stable.json!"
-            else
-              MESSAGE_TEXT="Supervisor field is different from the remote stable.json!"
-            fi
-          fi
-          if [ -z "$MESSAGE_TEXT" ]; then
-            MESSAGE_TEXT="No updates to homeassistant or supervisor field, just a regular check."
-          fi
-          # Append mention of all
-          MESSAGE_TEXT="${MESSAGE_TEXT}"
+      - name: Send DingTalk notification
+        id: send
+        if: steps.compare_and_update.outputs.homeassistant_diff == 'true' || steps.compare_and_update.outputs.supervisor_diff == 'true'
+        run: |
+          timestamp=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S%:z")
 
-          # Export outputs for later steps
-          echo "homeassistant_diff=$homeassistant_diff" >> "$GITHUB_OUTPUT"
-          echo "supervisor_diff=$supervisor_diff" >> "$GITHUB_OUTPUT"
-          echo "message=$MESSAGE_TEXT" >> "$GITHUB_OUTPUT"
+          message=$(cat <<EOF
+          {
+            "msgtype": "markdown",
+            "markdown": {
+              "title": "${{ steps.collect.outputs.message_title }}",
+              "text": "**🔎Haos-version版本更新检测推送** \n\n 🚀 **检测时间: $timestamp**\n\n${{ steps.collect.outputs.message_body }}"
+            },
+            "at": {
+              "isAtAll": false
+            }
+          }
+          EOF
+          )
+
+          response=$(curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "$message")
+
+          if echo "$response" | grep -q "errcode\":0"; then
+            echo "success"
+            echo "notification_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "faild: $response"
+            echo "notification_status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
 
       - name: Commit and Push changes if needed
         id: commit_and_push
+        if: steps.compare_and_update.outputs.homeassistant_diff == 'true' && steps.send.outputs.notification_status == 'success'
         run: |
-          # Configure git author
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          # Only commit if homeassistant field was updated
-          if [ "${{ steps.compare_and_update.outputs.homeassistant_diff }}" = "true" ]; then
-            git add stable.json
-            git commit -m "Sync stable.json homeassistant core version"
-            # Push to the same branch that triggered the workflow
-            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref_name }}
-            echo "update=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No changes to homeassistant field; skipping commit." 
-            echo "update=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Clean up remote-stable.json
-        run: |
-          # Remove fetched remote file
-          rm -f remote-stable.json
-
-      - name: Send DingTalk notification
-        run: |
-          ORIG_TEXT="${{ steps.compare_and_update.outputs.message }}"
-          KEYWORD="StableSync"
-          FULL_TEXT="检测通知：${KEYWORD}\n${ORIG_TEXT}"
-
-          PAYLOAD=$(jq -n --arg text "$FULL_TEXT" '{
-            "msgtype": "text",
-            "text": {
-              "content": $text
-            },
-            "at": { "isAtAll": true }
-          }')
-
-          echo "Sending DingTalk notification:"
-          echo "$FULL_TEXT"
-
-          curl -s -H "Content-Type: application/json" \
-               -d "$PAYLOAD" \
-               "${{ secrets.DINGTALK_WEBHOOK }}"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add stable.json
+          git commit -m "Sync stable.json homeassistant core version"
+          git push
+          echo "update=true" >> "$GITHUB_OUTPUT"
