@@ -106,7 +106,7 @@ jobs:
           fi
           
           if [ "${{ steps.compare_core.outputs.homeassistant_diff }}" == 'true' ]; then
-              message_bode+="**Homeassistant Core版本号已同步更新:** \n\n **Detail:[${{steps.local.outputs.local_home}}] ➡️ [${{steps.remote.outputs.remote_home}}]**\n\n"
+              message_body+="**Homeassistant Core版本号已同步更新:** \n\n **Detail:[${{steps.local.outputs.local_home}}] ➡️ [${{steps.remote.outputs.remote_home}}]**\n\n"
               message_body+="---------------------------------------\n\n"
           fi
           
