@@ -93,7 +93,7 @@ jobs:
           echo "supervisor_diff=$supervisor_diff" >>  "$GITHUB_OUTPUT"
           echo "supervisor_diff=$supervisor_diff"
 
-      - name: Generate dingTalk message
+      - name: Generate DingTalk message
         id: message
         if: steps.compare_core.outputs.homeassistant_diff == 'true' || steps.compare_supervisor.outputs.supervisor_diff == 'true'
         run: |
@@ -101,19 +101,20 @@ jobs:
           message_body+="---------------------------------------\n\n"
           
           if [ "${{ steps.compare_supervisor.outputs.supervisor_diff }}" == 'true' ]; then
-              message_body+="**Supervisor版本需要更新: [${{steps.local.outputs.local_supervisor}}] ➡️ [${{steps.remote.outputs.remote_supervisor }}]**\n\n"
+              message_body+="**Supervisor版本需要更新:** \n\n **版本号:[${{steps.local.outputs.local_supervisor}}] ➡️ [${{steps.remote.outputs.remote_supervisor }}]**\n\n"
               message_body+="---------------------------------------\n\n"
           fi
           
           if [ "${{ steps.compare_core.outputs.homeassistant_diff }}" == 'true' ]; then
-              message_bode+="**Homeassistant Core版本号已同步更新: [${{steps.local.outputs.local_home}}] ➡️ [${{steps.remote.outputs.remote_home}}]**\n\n"
+              message_bode+="**Homeassistant Core版本号已同步更新:** \n\n **Detail:[${{steps.local.outputs.local_home}}] ➡️ [${{steps.remote.outputs.remote_home}}]**\n\n"
+              message_body+="---------------------------------------\n\n"
           fi
           
           echo "message_title=$message_title" >> $GITHUB_OUTPUT
           echo "message_body<<EOF" >> $GITHUB_OUTPUT
           echo "$message_body" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          echo "Found new releases to notify"
+          echo "message: $message_body"
 
       - name: Send DingTalk notification
         id: send
