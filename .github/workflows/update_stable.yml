@@ -100,12 +100,12 @@ jobs:
           message_title="新版本Release检测通知"
           message_body+="---------------------------------------\n\n"
           
-          if [ "${{ steps.compare_core.outputs.supervisor_diff }}" == 'true' ]; then
+          if [ "${{ steps.compare_supervisor.outputs.supervisor_diff }}" == 'true' ]; then
               message_body+="**Supervisor版本需要更新: [${{steps.local.outputs.local_supervisor}}] ➡️ [${{steps.remote.outputs.remote_supervisor }}]**\n\n"
               message_body+="---------------------------------------\n\n"
           fi
           
-          if [ "${{ steps.compare_supervisor.outputs.homeassistant_diff }}" == 'true' ]; then
+          if [ "${{ steps.compare_core.outputs.homeassistant_diff }}" == 'true' ]; then
               message_bode+="**Homeassistant Core版本号已同步更新: [${{steps.local.outputs.local_home}}] ➡️ [${{steps.remote.outputs.remote_home}}]**\n\n"
           fi
           
