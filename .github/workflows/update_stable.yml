@@ -77,7 +77,7 @@ jobs:
           if [ "${{ steps.local.outputs.local_home  }}" != "${{ steps.remote.outputs.remote_home}}" ]; then
             homeassistant_diff=true
             # Update the local file's homeassistant field
-            jq --argjson newHome "${{steps.remote.outputs.remote_home}}" '.homeassistant = $newHome' "$LOCAL_FILE" > temp.json
+            jq --argjson newHome '${{steps.remote.outputs.remote_home}}' '.homeassistant = $newHome' "$LOCAL_FILE" > temp.json
             mv temp.json "$LOCAL_FILE"
           fi
           echo "homeassistant_diff=$homeassistant_diff" >>  "$GITHUB_OUTPUT"
