@@ -14,6 +14,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Fetch remote stable.json
+        id: fetch
         run: |
           # Fetch the remote stable.json from Home Assistant
           REMOTE_URL="https://version.home-assistant.io/stable.json"
@@ -21,21 +22,26 @@ jobs:
           curl -sL "$REMOTE_URL" -o remote-stable.json
           echo "Fetched remote file contents:"
           cat remote-stable.json
+          echo "LOCAL_FILE=stable.json" >> "$GITHUB_OUTPUT"
+          echo "REMOTE_FILE=remote-stable.json" >> "$GITHUB_OUTPUT"
 
       - name: Get local version info
         id: local
-        run: |
-          LOCAL_FILE="stable.json"
+        run: | 
+          LOCAL_FILE="${{steps.fetch.outputs.LOCAL_FILE}}"
           
           if [ ! -f "$LOCAL_FILE" ]; then
             echo "Error: $LOCAL_FILE does not exist!"
             exit 1
           fi
           
-          LOCAL_HOME=$(jq -c '.homeassistant' "$LOCAL_FILE")
+          LOCAL_HOME=$(jq '.homeassistant' "$LOCAL_FILE")
           LOCAL_SUPERVISOR=$(jq -r '.supervisor' "$LOCAL_FILE")
           
-          echo "local_home=$LOCAL_HOME" >>  "$GITHUB_OUTPUT"
+          echo "local_home<<EOF" >> $GITHUB_OUTPUT
+          echo "$LOCAL_HOME" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
           echo "local_supervisor=$LOCAL_SUPERVISOR" >>  "$GITHUB_OUTPUT"
           
           echo "local_home：$LOCAL_HOME"
@@ -44,17 +50,20 @@ jobs:
       - name: Get remote version info
         id: remote
         run: |
-          REMOTE_FILE="remote-stable.json"
+          REMOTE_FILE="${{steps.fetch.outputs.REMOTE_FILE}}"
           
           if [ ! -f "$REMOTE_FILE" ]; then
             echo "Error: $REMOTE_FILE does not exist!"
             exit 1
           fi
           
-          REMOTE_HOME=$(jq -c '.homeassistant' "$REMOTE_FILE")
+          REMOTE_HOME=$(jq '.homeassistant' "$REMOTE_FILE")
           REMOTE_SUPERVISOR=$(jq -r '.supervisor' "$REMOTE_FILE")
           
-          echo "remote_home=$REMOTE_HOME" >>  "$GITHUB_OUTPUT"
+          echo "remote_home<<EOF" >> $GITHUB_OUTPUT
+          echo "$REMOTE_HOME" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
           echo "remote_supervisor=$REMOTE_SUPERVISOR" >>  "$GITHUB_OUTPUT"
           
           echo "remote_home：$REMOTE_HOME"
@@ -63,11 +72,12 @@ jobs:
       - name: Compare homeassistant core versions & update stable.json
         id: compare_core
         run: |
+          LOCAL_FILE="${{steps.fetch.outputs.LOCAL_FILE}}"
           homeassistant_diff=false
           if [ "${{ steps.local.outputs.local_home  }}" != "${{ steps.remote.outputs.remote_home}}" ]; then
             homeassistant_diff=true
             # Update the local file's homeassistant field
-            jq --argjson newHome "$REMOTE_HOME" '.homeassistant = $newHome' "$LOCAL_FILE" > temp.json
+            jq --argjson newHome "${{steps.remote.outputs.remote_home}}" '.homeassistant = $newHome' "$LOCAL_FILE" > temp.json
             mv temp.json "$LOCAL_FILE"
           fi
           echo "homeassistant_diff=$homeassistant_diff" >>  "$GITHUB_OUTPUT"
