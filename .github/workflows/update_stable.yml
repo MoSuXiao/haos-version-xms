@@ -32,7 +32,7 @@ jobs:
             exit 1
           fi
           
-          LOCAL_HOME=$(jq '.homeassistant' "$LOCAL_FILE")
+          LOCAL_HOME=$(jq -c '.homeassistant' "$LOCAL_FILE")
           LOCAL_SUPERVISOR=$(jq -r '.supervisor' "$LOCAL_FILE")
           
           echo "local_home=$LOCAL_HOME" >>  "$GITHUB_OUTPUT"
@@ -51,7 +51,7 @@ jobs:
             exit 1
           fi
           
-          REMOTE_HOME=$(jq '.homeassistant' "$REMOTE_FILE")
+          REMOTE_HOME=$(jq -c '.homeassistant' "$REMOTE_FILE")
           REMOTE_SUPERVISOR=$(jq -r '.supervisor' "$REMOTE_FILE")
           
           echo "remote_home=$REMOTE_HOME" >>  "$GITHUB_OUTPUT"
