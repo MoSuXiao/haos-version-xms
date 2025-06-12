@@ -2,10 +2,10 @@
   "channel": "stable",
   "supervisor": "2025.05.1",
   "homeassistant": {
-    "default": "2025.5.2",
+    "default": "2025.6.0",
     "qemux86": "2025.6.0",
     "qemux86-64": "2025.6.0",
-    "qemuarm": "2025.2.1",
+    "qemuarm": "2025.6.0",
     "qemuarm-64": "2025.6.0",
     "generic-x86-64": "2025.6.0",
     "intel-nuc": "2025.6.0",
