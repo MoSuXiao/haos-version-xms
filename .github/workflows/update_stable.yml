@@ -87,7 +87,7 @@ jobs:
         id: compare_supervisor
         run: |
           supervisor_diff=false
-          if [ "${{ steps.local.outputs.local_supervisor  }}" != "${{ steps.remote.outputs.remote_supervisor }}" ]; then
+          if [ "${{ steps.local.outputs.local_supervisor }}" != "${{ steps.remote.outputs.remote_supervisor }}" ]; then
             supervisor_diff=true
           fi
           echo "supervisor_diff=$supervisor_diff" >>  "$GITHUB_OUTPUT"
@@ -101,7 +101,7 @@ jobs:
           message_body+="---------------------------------------\n\n"
           
           if [ "${{ steps.compare_supervisor.outputs.supervisor_diff }}" == 'true' ]; then
-              message_body+="**Supervisor版本需要更新:** \n\n **版本信息:[${{steps.local.outputs.local_supervisor}}] ➡️ [${{steps.remote.outputs.remote_supervisor }}]**\n\n"
+              message_body+="**Supervisor版本需要更新:** \n\n **版本信息:[${{ steps.local.outputs.local_supervisor }}] ➡️ [${{ steps.remote.outputs.remote_supervisor }}]**\n\n"
               message_body+="---------------------------------------\n\n"
           fi
           
@@ -109,8 +109,8 @@ jobs:
                message_body+="**Homeassistant Core版本号已同步更新:** \n\n **版本信息:**\n\n"
     
               # 解析本地和远程版本JSON数据
-              local_versions='${{steps.local.outputs.local_home}}'
-              remote_versions='${{steps.remote.outputs.remote_home}}' 
+              local_versions='${{ steps.local.outputs.local_home }}'
+              remote_versions='${{ steps.remote.outputs.remote_home }}' 
           
               # 使用jq工具处理JSON数据
               # 注意：需要确保工作流环境中已安装jq
@@ -147,7 +147,7 @@ jobs:
             "msgtype": "markdown",
             "markdown": {
               "title": "${{ steps.message.outputs.message_title }}",
-              "text": "**🔎Haos-version版本更新检测推送** \n\n 🚀 **检测时间: $timestamp**\n\n${{ steps.message.outputs.message_body }}"
+              "text": "**🔎 Haos-version版本更新检测推送** \n\n 🚀 **检测时间: $timestamp**\n\n${{ steps.message.outputs.message_body }}"
             },
             "at": {
               "isAtAll": false
