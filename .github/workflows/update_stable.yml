@@ -194,6 +194,6 @@ jobs:
               workflow_id: "release-armv7-supervisor.yml",
               ref: "main",
               inputs: {
-                tag："${{ steps.remote.outputs.remote_supervisor }}"
+                tag:"${{ steps.remote.outputs.remote_supervisor }}"
               }
             })
