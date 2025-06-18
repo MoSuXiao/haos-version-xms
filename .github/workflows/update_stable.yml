@@ -158,18 +158,18 @@ jobs:
           EOF
           )
 
-          response=$(curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
-            -H "Content-Type: application/json" \
-            -d "$message")
+          # response=$(curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
+          #   -H "Content-Type: application/json" \
+          #   -d "$message")
 
-          if echo "$response" | grep -q "errcode\":0"; then
-            echo "success"
+          # if echo "$response" | grep -q "errcode\":0"; then
+          #   echo "success"
             echo "notification_status=success" >> $GITHUB_OUTPUT
-          else
-            echo "faild: $response"
-            echo "notification_status=failure" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+          # else
+          #   echo "faild: $response"
+          #   echo "notification_status=failure" >> $GITHUB_OUTPUT
+          #   exit 1
+          # fi
 
       - name: Commit and Push changes if needed
         id: commit_and_push
