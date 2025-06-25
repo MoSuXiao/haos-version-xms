@@ -89,3 +89,5 @@ runs:
         response=$(curl -s -X POST "${{ inputs.hook }}" \
           -H "Content-Type: application/json" \
           -d "$message")
+        
+        echo "response: $response"
