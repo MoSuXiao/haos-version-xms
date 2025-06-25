@@ -1,8 +1,8 @@
 name: Update stable.json and DingTalk Notification
 
 on:
-  schedule:
-    - cron: '30 0 * * *'
+  # schedule:
+  #   - cron: '30 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -182,18 +182,18 @@ jobs:
           git push
           echo "update=true" >> "$GITHUB_OUTPUT"
 
-      - name: Trigger Workflow
-        uses: actions/github-script@v7.0.1
-        if: steps.compare_supervisor.outputs.supervisor_diff == 'true' && steps.send.outputs.notification_status == 'success'
-        with:
-          github-token: ${{ secrets.RELEASE_SUPERVISOR_TOKEN }}
-          script: |
-            github.rest.actions.createWorkflowDispatch({
-              owner: "MoSuXiao",
-              repo: "ha-supervisor-xms",
-              workflow_id: "release-armv7-supervisor.yml",
-              ref: "main",
-              inputs: {
-                tag:"${{ steps.remote.outputs.remote_supervisor }}"
-              }
-            })
+      # - name: Trigger Workflow
+      #   uses: actions/github-script@v7.0.1
+      #   if: steps.compare_supervisor.outputs.supervisor_diff == 'true' && steps.send.outputs.notification_status == 'success'
+      #   with:
+      #     github-token: ${{ secrets.RELEASE_SUPERVISOR_TOKEN }}
+      #     script: |
+      #       github.rest.actions.createWorkflowDispatch({
+      #         owner: "MoSuXiao",
+      #         repo: "ha-supervisor-xms",
+      #         workflow_id: "release-armv7-supervisor.yml",
+      #         ref: "main",
+      #         inputs: {
+      #           tag:"${{ steps.remote.outputs.remote_supervisor }}"
+      #         }
+      #       })
