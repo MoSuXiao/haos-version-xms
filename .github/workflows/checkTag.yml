@@ -17,16 +17,14 @@ jobs:
     steps:
       - name: 检查镜像是否存在
         id: check
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 检查 GHCR 上是否存在该 tag 的镜像
           curl -sSL \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/orgs/iHost-Open-Source-Project/packages/container/armv7-hassio-supervisor/versions" |
-            jq -e --arg TAG "$TAG" '.[] | select(.metadata.container.tags[]? == $TAG)' > /dev/null 2>&1
-          
+            jq -e --arg TAG "${{inputs.tag}}" '.[] | select(.metadata.container.tags[]? == $TAG)' > /dev/null 2>&1
+          echo "tag=${{inputs.tag}}"
           if [ $? -eq 0 ]; then
             echo "镜像已存在，无需构建"
             echo "should_build=false" >> $GITHUB_ENV
