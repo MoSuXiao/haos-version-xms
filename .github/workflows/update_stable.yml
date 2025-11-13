@@ -103,8 +103,9 @@ jobs:
           fi
           
           if [ "${{ steps.compare_core.outputs.homeassistant_diff }}" == 'true' ]; then
-               message_body+="**Homeassistant Core版本号需要更新:** \n\n **版本信息:**\n\n"
-    
+              message_body+="**Homeassistant Core版本号需要更新:** \n\n"
+              message_body+="**注意：HA官方将在12月放弃32位架构，更新版本时注意检查tinker镜像是否具有armv7架构！**\n\n"
+              message_body+="**版本信息:**\n\n"
               local_versions='${{ steps.local.outputs.local_home }}'
               remote_versions='${{ steps.remote.outputs.remote_home }}' 
           
@@ -119,6 +120,8 @@ jobs:
                       message_body+="- **$platform: [$local_version] ➡️ [$remote_version]**\n\n"
                   fi
               done <<< "$platforms"
+              
+              message_body+="\n**注意：在修改版本号前注意检查tinker机器镜像是否具有armv7架构！**\n\n"
     
               message_body+="\n---------------------------------------\n\n"
           fi
@@ -172,3 +175,4 @@ jobs:
 #          git commit -m "Sync stable.json homeassistant core version"
 #          git push
 #          echo "update=true" >> $GITHUB_OUTPUT
+
