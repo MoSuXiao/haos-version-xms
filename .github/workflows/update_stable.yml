@@ -1,8 +1,8 @@
 name: Update stable.json and DingTalk Notification
 
 on:
-  # schedule:
-  #   - cron: '30 0 * * *'
+  schedule:
+    - cron: '30 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -76,11 +76,6 @@ jobs:
           homeassistant_diff=false
           if [ "${{ steps.local.outputs.local_home  }}" != "${{ steps.remote.outputs.remote_home}}" ]; then
             homeassistant_diff=true
-            # Update the local file's homeassistant field
-            jq --argjson newHome '${{steps.remote.outputs.remote_home}}' '.homeassistant = $newHome' "$LOCAL_FILE" > temp.json
-            jq --argjson newHome '${{steps.remote.outputs.remote_home}}' '.homeassistant = $newHome' "dev.json" > temp_1.json
-            mv temp.json "$LOCAL_FILE"
-            mv temp_1.json "dev.json"
           fi
           echo "homeassistant_diff=$homeassistant_diff" >>  "$GITHUB_OUTPUT"
           echo "homeassistant_diff=$homeassistant_diff"
@@ -108,17 +103,13 @@ jobs:
           fi
           
           if [ "${{ steps.compare_core.outputs.homeassistant_diff }}" == 'true' ]; then
-               message_body+="**Homeassistant Core版本号已同步更新:** \n\n **版本信息:**\n\n"
+               message_body+="**Homeassistant Core版本号需要更新:** \n\n **版本信息:**\n\n"
     
-              # 解析本地和远程版本JSON数据
               local_versions='${{ steps.local.outputs.local_home }}'
               remote_versions='${{ steps.remote.outputs.remote_home }}' 
           
-              # 使用jq工具处理JSON数据
-              # 注意：需要确保工作流环境中已安装jq
               platforms=$(echo "$local_versions" | jq -r 'keys_unsorted[]' | sort)
-    
-              # 遍历每个平台，生成格式化消息
+
               while IFS= read -r platform; do
                   local_version=$(echo "$local_versions" | jq -r ".[\"$platform\"]")
                   remote_version=$(echo "$remote_versions" | jq -r ".[\"$platform\"]")
@@ -158,42 +149,26 @@ jobs:
           EOF
           )
 
-          # response=$(curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
-          #   -H "Content-Type: application/json" \
-          #   -d "$message")
+          response=$(curl -s -X POST "${{ secrets.DINGTALK_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "$message")
 
-          # if echo "$response" | grep -q "errcode\":0"; then
-          #   echo "success"
+          if echo "$response" | grep -q "errcode\":0"; then
+            echo "success"
             echo "notification_status=success" >> $GITHUB_OUTPUT
-          # else
-          #   echo "faild: $response"
-          #   echo "notification_status=failure" >> $GITHUB_OUTPUT
-          #   exit 1
-          # fi
+          else
+            echo "faild: $response"
+            echo "notification_status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
 
-      - name: Commit and Push changes if needed
-        id: commit_and_push
-        if: steps.compare_core.outputs.homeassistant_diff == 'true' && steps.send.outputs.notification_status == 'success'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add stable.json dev.json
-          git commit -m "Sync stable.json homeassistant core version"
-          git push
-          echo "update=true" >> "$GITHUB_OUTPUT"
-
-      # - name: Trigger Workflow
-      #   uses: actions/github-script@v7.0.1
-      #   if: steps.compare_supervisor.outputs.supervisor_diff == 'true' && steps.send.outputs.notification_status == 'success'
-      #   with:
-      #     github-token: ${{ secrets.RELEASE_SUPERVISOR_TOKEN }}
-      #     script: |
-      #       github.rest.actions.createWorkflowDispatch({
-      #         owner: "MoSuXiao",
-      #         repo: "ha-supervisor-xms",
-      #         workflow_id: "release-armv7-supervisor.yml",
-      #         ref: "main",
-      #         inputs: {
-      #           tag:"${{ steps.remote.outputs.remote_supervisor }}"
-      #         }
-      #       })
+#      - name: Commit and Push changes if needed
+#        id: commit_and_push
+#        if: steps.compare_core.outputs.homeassistant_diff == 'true' && steps.send.outputs.notification_status == 'success'
+#        run: |
+#          git config --local user.email "action@github.com"
+#          git config --local user.name "GitHub Action"
+#          git add stable.json dev.json
+#          git commit -m "Sync stable.json homeassistant core version"
+#          git push
+#          echo "update=true" >> $GITHUB_OUTPUT
